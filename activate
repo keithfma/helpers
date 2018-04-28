@@ -1,0 +1,13 @@
+#!/bin/bash
+
+USAGE=`cat << EOF
+Activate specified python virtualenv
+Usage:
+    source activate [virtualenv name]
+EOF`
+
+if [ $# -ne 1 ] ; then
+    echo "$USAGE"
+fi
+
+source ~/venv/${1}/bin/activate
