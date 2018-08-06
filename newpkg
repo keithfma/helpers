@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+
+# parse input arguments
+parser = argparse.ArgumentParser(description = 'Initialize new package '
+    'directories and template files')
+parser.add_argument('name', help = 'Package Name')
+parser.add_argument('version', help = 'Package Version')
+parser.add_argument('descr', help = 'Package Short Description')
+pkg = parser.parse_args()
+pkg.dir = os.path.join(os.getcwd(), pkg.name, pkg.version)
+
+# confirm before initializing files
+while True:
+    confirmation = input('Initialize package in {}? (y/n): '.format(pkg.dir))
+    if confirmation == 'y':
+        break
+    elif confirmation == 'n':
+        print('Aborted')
+        sys.exit()
+    else:
+        print('...please respond "y" or "n"')
+
+# don't allow spaces in the directory name
+if ' ' in pkg.dir:
+    print('Spaces are not allowed in the package path, aborted.')
+    sys.exit()
+
+# create new top directory for package, abort if it exists
+try:
+    os.makedirs(pkg.dir, mode = 0o755)
+except FileExistsError:
+    print('Package path already exists, aborted.')
+    sys.exit()
+
+# create standard subdirectories for package
+for subdir in ['dist', 'src', 'build', 'install']:
+    os.mkdir(os.path.join(pkg.dir, subdir), mode = 0o755)
+
+# create notes file
+with open(os.path.join(pkg.dir, 'notes'), 'w') as notes:
+    notes.write('Build / install notes for package {} version {}\n'.format(
+        pkg.name, pkg.version))
+    notes.write('----------\n\n')
+
+# create module file
+dir_install = os.path.join(pkg.dir, 'install')
+dir_bin =     os.path.join(dir_install, 'bin')
+dir_lib =     os.path.join(dir_install, 'lib')
+dir_include = os.path.join(dir_install, 'include')
+with open(os.path.join(pkg.dir, 'modulefile.txt'), 'w') as mod:
+    mod.write('#%Module1.0\n')
+    mod.write('module-whatis "{}"\n'.format(pkg.descr))
+    mod.write('\n')
+    mod.write('#setenv MOD_{}_INSTALL "{}"\n'.format(pkg.name.upper(), dir_install))
+    mod.write('#setenv MOD_{}_BIN "{}"\n'.format(pkg.name.upper(), dir_bin))
+    mod.write('#setenv MOD_{}_LIB "{}"\n'.format(pkg.name.upper(), dir_lib))
+    mod.write('#setenv MOD_{}_INCLUDE "{}"\n'.format(pkg.name.upper(), dir_include))
+    mod.write('\n')
+    mod.write('#prepend-path PATH "{}"\n'.format(dir_bin))
+    mod.write('\n')
+    mod.write('#prepend-path LIBRARY_PATH "{}"\n'.format(dir_lib))
+    mod.write('#prepend-path LD_LIBRARY_PATH "{}"\n'.format(dir_lib))
+    mod.write('\n')
+    mod.write('#prepend-path CPATH "{}"\n'.format(dir_include))
+    mod.write('#prepend-path C_INCLUDE_PATH "{}"\n'.format(dir_include))
+    mod.write('#prepend-path CPLUS_INCLUDE_PATH "{}"\n'.format(dir_include))
+    mod.write('\n')
+    mod.write('#prepend-path PKG_CONFIG_PATH "{}"\n'.format(dir_lib))
+    mod.write('\n')
+    mod.write('#prepend-path PYTHONPATH "{}"\n'.format(dir_lib))
+    mod.write('\n')
+
+# done
