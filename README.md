@@ -6,3 +6,4 @@ A few simple helper tools I use to make my CLI life easier. Contents includes:
 | ----------- | ----------- |
 | activate | Activate python venv from a standard location |
 | newpkg | Helper script to initialize a new package |
+| assume-role | Create an AWS session under an assumed role with less steps |
