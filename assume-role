@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+
+import boto3
+
+import argparse
+import configparser
+from getpass import getuser
+from os.path import expanduser
+from pathlib import Path
+from sys import stdout
+from uuid import uuid4
+
+
+ap = argparse.ArgumentParser(
+    description='Create an AWS session under an assumed role and print the '
+                'credentials to use it as environment variables',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+)
+ap.add_argument(
+    'name',
+    help='Name for the role to assume'
+)
+ap.add_argument(
+    '--session',
+    required=False,
+    default=f'{getuser()}-{uuid4().hex}',
+    help='Name for the session created with the assumed role'
+)
+ap.add_argument(
+    '--config',
+    required=False,
+    default='~/.aws/config',
+    type=Path,
+    help='Path to AWS configuration INI containing the role definition'
+)
+args = ap.parse_args()
+
+# read the AWS config file
+config = configparser.ConfigParser()
+config.read(args.config.expanduser())
+
+# find the requested profile, or die trying
+profile_key = f'profile {args.name}'
+try: 
+    section = config[profile_key]
+except KeyError as err:
+    msg = f'No record for profile "{args.name}" found in config file at {config_path}'
+    raise ValueError(msg) from e
+    
+# get the ARN, or die trying
+try:
+    role_arn = section['role_arn'] 
+except KeyError as err:
+    msg = f'Profile "{args.name}" lacks a role_arn definition'
+    raise KeyError(msg) from err
+
+# create the session and retrieve the credentials
+sts_client = boto3.client('sts')
+assumed_role = sts_client.assume_role(RoleArn=role_arn, RoleSessionName=args.session)
+credentials = assumed_role['Credentials']
+
+# shell commands to set enviroment vars to stdout
+stdout.write(f"""
+export AWS_ACCESS_KEY_ID='{credentials['AccessKeyId']}'
+export AWS_SECRET_ACCESS_KEY='{credentials['SecretAccessKey']}'
+export AWS_SESSION_TOKEN='{credentials['SessionToken']}'
+""")
+
